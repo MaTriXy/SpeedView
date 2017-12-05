@@ -1,44 +1,34 @@
 package com.github.anastr.speedviewlib;
 
-import android.animation.Animator;
-import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
-import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.view.animation.DecelerateInterpolator;
 
-import java.util.Locale;
-import java.util.Random;
+import com.github.anastr.speedviewlib.components.Indicators.NormalIndicator;
 
-public class SpeedView extends Speed {
+/**
+ * this Library build By Anas Altair
+ * see it on <a href="https://github.com/anastr/SpeedView">GitHub</a>
+ */
+public class SpeedView extends Speedometer {
 
-    private Path indicatorPath, markPath;
-    private Paint circlePaint, paint, speedometerPaint, markPaint;
-    private TextPaint speedTextPaint, textPaint;
-    private RectF speedometerRect;
-
-    private boolean canceled = false;
-    private final int MIN_DEGREE = 135, MAX_DEGREE = 135+270;
-    /** to rotate indicator */
-    private float degree = MIN_DEGREE;
-    private int maxSpeed = 100;
-    private int speed = 0;
-    private ValueAnimator speedAnimator, trembleAnimator;
+    private Path markPath = new Path();
+    private Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG),
+            speedometerPaint = new Paint(Paint.ANTI_ALIAS_FLAG),
+            markPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private RectF speedometerRect = new RectF();
 
     public SpeedView(Context context) {
-        super(context);
-        init();
+        this(context, null);
     }
 
     public SpeedView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init();
-        initAttributeSet(context, attrs);
+        this(context, attrs, 0);
     }
 
     public SpeedView(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -48,87 +38,41 @@ public class SpeedView extends Speed {
     }
 
     @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        int width = getMeasuredWidth();
-        int height = getMeasuredHeight();
-        int size = (width > height) ? height : width;
-        setMeasuredDimension(size, size);
+    protected void defaultGaugeValues() {
     }
 
-    private void initAttributeSet(Context context, AttributeSet attrs) {
-        TypedArray a = context.getTheme().obtainStyledAttributes(attrs, R.styleable.SpeedView, 0, 0);
-
-        setIndicatorColor(a.getColor(R.styleable.SpeedView_indicatorColor, getIndicatorColor()));
-        setCenterCircleColor(a.getColor(R.styleable.SpeedView_centerCircleColor, getCenterCircleColor()));
-        setMarkColor(a.getColor(R.styleable.SpeedView_markColor, getMarkColor()));
-        setLowSpeedColor(a.getColor(R.styleable.SpeedView_lowSpeedColor, getLowSpeedColor()));
-        setMediumSpeedColor(a.getColor(R.styleable.SpeedView_mediumSpeedColor, getMediumSpeedColor()));
-        setHighSpeedColor(a.getColor(R.styleable.SpeedView_highSpeedColor, getHighSpeedColor()));
-        setTextColor(a.getColor(R.styleable.SpeedView_textColor, getTextColor()));
-        setBackgroundCircleColor(a.getColor(R.styleable.SpeedView_backgroundCircleColor, getBackgroundCircleColor()));
-        setSpeedometerWidth(a.getDimension(R.styleable.SpeedView_speedometerWidth, getSpeedometerWidth()));
-        setMaxSpeed(a.getInt(R.styleable.SpeedView_maxSpeed, getMaxSpeed()));
-        setWithTremble(a.getBoolean(R.styleable.SpeedView_withTremble, isWithTremble()));
-        setWithBackgroundCircle(a.getBoolean(R.styleable.SpeedView_withBackgroundCircle, isWithBackgroundCircle()));
-        setSpeedTextSize(a.getDimension(R.styleable.SpeedView_speedTextSize, getSpeedTextSize()));
-        String unit = a.getString(R.styleable.SpeedView_unit);
-        a.recycle();
-        setUnit( (unit != null) ? unit : getUnit() );
+    @Override
+    protected void defaultSpeedometerValues() {
+        super.setIndicator(new NormalIndicator(getContext()));
+        super.setBackgroundCircleColor(Color.TRANSPARENT);
     }
 
     private void init() {
-        indicatorPath = new Path();
-        markPath = new Path();
-
-        circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        speedometerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        markPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        speedTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-
-        speedometerRect = new RectF();
-
         speedometerPaint.setStyle(Paint.Style.STROKE);
         markPaint.setStyle(Paint.Style.STROKE);
-        speedTextPaint.setTextAlign(Paint.Align.CENTER);
-
-        speedAnimator = ValueAnimator.ofFloat(0f, 1f);
-        trembleAnimator = ValueAnimator.ofFloat(0f, 1f);
+        circlePaint.setColor(Color.DKGRAY);
     }
 
+    private void initAttributeSet(Context context, AttributeSet attrs) {
+        if (attrs == null) {
+            return;
+        }
+        TypedArray a = context.getTheme().obtainStyledAttributes(attrs, R.styleable.SpeedView, 0, 0);
+
+        circlePaint.setColor(a.getColor(R.styleable.SpeedView_sv_centerCircleColor, circlePaint.getColor()));
+        a.recycle();
+    }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldW, int oldH) {
         super.onSizeChanged(w, h, oldW, oldH);
 
-        float risk = getSpeedometerWidth()/2f;
-        speedometerRect.set(risk, risk, w -risk, h -risk);
-
-        float indW = w/32f;
-
-        indicatorPath.moveTo(w/2f, 0f);
-        indicatorPath.lineTo(w/2f -indW, h*2f/3f);
-        indicatorPath.lineTo(w/2f +indW, h*2f/3f);
-        RectF rectF = new RectF(w/2f -indW, h*2f/3f -indW, w/2f +indW, h*2f/3f +indW);
-        indicatorPath.addArc(rectF, 0f, 180f);
-        indicatorPath.moveTo(0f, 0f);
-
-        float markH = h/28f;
-        markPath.moveTo(w/2f, 0f);
-        markPath.lineTo(w/2f, markH);
-        markPath.moveTo(0f, 0f);
-        markPaint.setStrokeWidth(markH/3f);
+        updateBackgroundBitmap();
     }
 
     private void initDraw() {
         speedometerPaint.setStrokeWidth(getSpeedometerWidth());
         markPaint.setColor(getMarkColor());
-        speedTextPaint.setColor(getTextColor());
-        speedTextPaint.setTextSize(getSpeedTextSize());
-        textPaint.setColor(getTextColor());
-        circlePaint.setColor(getBackgroundCircleColor());
     }
 
     @Override
@@ -136,192 +80,65 @@ public class SpeedView extends Speed {
         super.onDraw(canvas);
         initDraw();
 
-        if (isWithBackgroundCircle())
-            canvas.drawCircle(getWidth()/2f, getHeight()/2f, getWidth()/2f, circlePaint);
+        drawSpeedUnitText(canvas);
 
-        speedometerPaint.setColor(getLowSpeedColor());
-        canvas.drawArc(speedometerRect, 135f, 160f, false, speedometerPaint);
-        speedometerPaint.setColor(getMediumSpeedColor());
-        canvas.drawArc(speedometerRect, 135f+160f, 75f, false, speedometerPaint);
+        drawIndicator(canvas);
+        canvas.drawCircle(getSize() *.5f, getSize() *.5f, getWidthPa()/12f, circlePaint);
+
+        drawNotes(canvas);
+    }
+
+    @Override
+    protected void updateBackgroundBitmap() {
+        Canvas c = createBackgroundBitmapCanvas();
+        initDraw();
+
+        float markH = getViewSizePa()/28f;
+        markPath.reset();
+        markPath.moveTo(getSize() *.5f, getPadding());
+        markPath.lineTo(getSize() *.5f, markH + getPadding());
+        markPaint.setStrokeWidth(markH/3f);
+
+        float risk = getSpeedometerWidth() *.5f + getPadding();
+        speedometerRect.set(risk, risk, getSize() -risk, getSize() -risk);
+
         speedometerPaint.setColor(getHighSpeedColor());
-        canvas.drawArc(speedometerRect, 135f+160f+75f, 35f, false, speedometerPaint);
+        c.drawArc(speedometerRect, getStartDegree(), getEndDegree()- getStartDegree(), false, speedometerPaint);
+        speedometerPaint.setColor(getMediumSpeedColor());
+        c.drawArc(speedometerRect, getStartDegree()
+                , (getEndDegree()- getStartDegree())*getMediumSpeedOffset(), false, speedometerPaint);
+        speedometerPaint.setColor(getLowSpeedColor());
+        c.drawArc(speedometerRect, getStartDegree()
+                , (getEndDegree()- getStartDegree())*getLowSpeedOffset(), false, speedometerPaint);
 
-        canvas.save();
-        canvas.rotate(135f+90f, getWidth()/2f, getHeight()/2f);
-        for (int i=135; i <= 345; i+=30) {
-            canvas.rotate(30f, getWidth()/2f, getHeight()/2f);
-            canvas.drawPath(markPath, markPaint);
+        c.save();
+        c.rotate(90f + getStartDegree(), getSize() *.5f, getSize() *.5f);
+        float everyDegree = (getEndDegree() - getStartDegree()) * .111f;
+        for (float i = getStartDegree(); i < getEndDegree()-(2f*everyDegree); i+=everyDegree) {
+            c.rotate(everyDegree, getSize() *.5f, getSize() *.5f);
+            c.drawPath(markPath, markPaint);
         }
-        canvas.restore();
+        c.restore();
 
-        paint.setColor(getIndicatorColor());
-        canvas.save();
-        canvas.rotate(90f +degree, getWidth()/2f, getHeight()/2f);
-        canvas.drawPath(indicatorPath, paint);
-        canvas.restore();
-        paint.setColor(getCenterCircleColor());
-        canvas.drawCircle(getWidth()/2f, getHeight()/2f, getWidth()/12f, paint);
-
-        textPaint.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("00", getWidth()/6f, getHeight()*7/8f, textPaint);
-        textPaint.setTextAlign(Paint.Align.RIGHT);
-        canvas.drawText(String.format(Locale.getDefault(), "%d", maxSpeed), getWidth()*5/6f, getHeight()*7/8f, textPaint);
-        canvas.drawText(String.format(Locale.getDefault(), "%.1f"
-                , (degree-MIN_DEGREE) * maxSpeed/(MAX_DEGREE-MIN_DEGREE)) +getUnit()
-                , getWidth()/2f, speedometerRect.bottom, speedTextPaint);
+        if (getTickNumber() > 0)
+            drawTicks(c);
+        else
+            drawDefMinMaxSpeedPosition(c);
     }
 
-    private void cancel() {
-        cancelSpeedMove();
-        cancelTremble();
+    public int getCenterCircleColor() {
+        return circlePaint.getColor();
     }
 
-    private void cancelTremble() {
-        canceled = true;
-        trembleAnimator.cancel();
-        canceled = false;
-    }
-
-    private void cancelSpeedMove() {
-        canceled = true;
-        speedAnimator.cancel();
-        canceled = false;
-    }
-
-    @Override
-    public void speedPercentTo(int percent) {
-        percent = (percent > 100) ? 100 : (percent < 0) ? 0 : percent;
-        speedTo(percent * maxSpeed / 100);
-    }
-
-    @Override
-    public void speedToDef() {
-        speedTo(speed, 2000);
-    }
-
-    @Override
-    public void speedTo(int speed) {
-        speedTo(speed, 2000);
-    }
-
-    @Override
-    public void speedTo(int speed, long moveDuration) {
-        speed = (speed > maxSpeed) ? maxSpeed : (speed < 0) ? 0 : speed;
-        this.speed = speed;
-
-        float newDegree = (float)speed * (MAX_DEGREE - MIN_DEGREE) /maxSpeed +MIN_DEGREE;
-        if (newDegree == degree)
+    /**
+     * change the color of the center circle (if exist),
+     * <b>this option is not available for all Speedometers</b>.
+     * @param centerCircleColor new color.
+     */
+    public void setCenterCircleColor(int centerCircleColor) {
+        circlePaint.setColor(centerCircleColor);
+        if (!isAttachedToWindow())
             return;
-
-        cancel();
-        speedAnimator = ValueAnimator.ofFloat(degree, newDegree);
-        speedAnimator.setInterpolator(new DecelerateInterpolator());
-        speedAnimator.setDuration(moveDuration);
-        speedAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                degree = (float) speedAnimator.getAnimatedValue();
-                postInvalidate();
-            }
-        });
-        speedAnimator.addListener(new Animator.AnimatorListener() {
-            @Override
-            public void onAnimationStart(Animator animation) {
-            }
-
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                if (!canceled)
-                    tremble();
-            }
-
-            @Override
-            public void onAnimationCancel(Animator animation) {
-            }
-
-            @Override
-            public void onAnimationRepeat(Animator animation) {
-            }
-        });
-        speedAnimator.start();
-    }
-
-    private void tremble() {
-        cancelTremble();
-        if (!isWithTremble())
-            return;
-        Random random = new Random();
-        float mad = 4*random.nextFloat() * ((random.nextBoolean()) ? -1 :1);
-        float originalDegree = (float)speed * (MAX_DEGREE - MIN_DEGREE) /maxSpeed +MIN_DEGREE;
-        mad = (originalDegree+mad > MAX_DEGREE) ? MAX_DEGREE - originalDegree
-                : (originalDegree+mad < MIN_DEGREE) ? MIN_DEGREE - originalDegree : mad;
-        trembleAnimator = ValueAnimator.ofFloat(degree, originalDegree +mad);
-        trembleAnimator.setInterpolator(new DecelerateInterpolator());
-        trembleAnimator.setDuration(1000);
-        trembleAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                degree = (float) trembleAnimator.getAnimatedValue();
-                postInvalidate();
-            }
-        });
-        trembleAnimator.addListener(new Animator.AnimatorListener() {
-            @Override
-            public void onAnimationStart(Animator animation) {
-            }
-
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                if (!canceled)
-                    tremble();
-            }
-
-            @Override
-            public void onAnimationCancel(Animator animation) {
-            }
-
-            @Override
-            public void onAnimationRepeat(Animator animation) {
-            }
-        });
-        trembleAnimator.start();
-    }
-
-    @Override
-    public int getPercentSpeed() {
-        return speed * 100 / maxSpeed;
-    }
-
-    @Override
-    public void setSpeedometerWidth(float speedometerWidth) {
-        super.setSpeedometerWidth(speedometerWidth);
-        float risk = speedometerWidth/2f;
-        speedometerRect.set(risk, risk, getWidth() -risk, getHeight() -risk);
-        invalidate();
-    }
-
-    @Override
-    public void setWithTremble(boolean withTremble) {
-        super.setWithTremble(withTremble);
-        tremble();
-    }
-
-    @Override
-    public int getSpeed() {
-        return speed;
-    }
-
-    @Override
-    public int getMaxSpeed() {
-        return maxSpeed;
-    }
-
-    @Override
-    public void setMaxSpeed(int maxSpeed) {
-        if (maxSpeed <= 0)
-            return;
-        this.maxSpeed = maxSpeed;
-        speedTo(speed);
         invalidate();
     }
 }

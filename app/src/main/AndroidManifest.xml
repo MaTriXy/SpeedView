@@ -17,7 +17,21 @@
         </activity>
         <activity android:name=".ControlActivity" />
         <activity android:name=".DeluxeSpeedActivity" />
-        <activity android:name=".SpeedViewActivity"></activity>
+        <activity android:name=".SpeedViewActivity" />
+        <activity android:name=".AwesomeSpeedometerActivity" />
+        <activity android:name=".RayActivity" />
+        <activity android:name=".PointerActivity" />
+        <activity android:name=".WorkWithNoteActivity" />
+        <activity android:name=".CreateProgrammatically" />
+        <activity android:name=".TubeSpeedometerActivity" />
+        <activity android:name=".ImageSpeedometerActivity" />
+        <activity android:name=".WorkWithIndicatorActivity" />
+        <activity android:name=".StartEndDegreeActivity" />
+        <activity android:name=".WorkWithModesActivity" />
+        <activity android:name=".SpeedTextPositionActivity" />
+        <activity android:name=".lineargauge.ProgressiveGaugeActivity" />
+        <activity android:name=".lineargauge.ImageLinearGaugeActivity" />
+        <activity android:name=".TickActivity" />
     </application>
 
 </manifest>
