@@ -39,6 +39,7 @@ public abstract class Gauge extends View {
             unitTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     /** the text after speedText */
     private String unit = "Km/h";
+    /** automatically increase and decrease speed value around the {@link #speed} */
     private boolean withTremble = true;
 
     /** the max range in speedometer, {@code default = 100} */
@@ -54,8 +55,8 @@ public abstract class Gauge extends View {
     /** what is speed now in <b>int</b> */
     private int currentIntSpeed = 0;
     /** what is speed now in <b>float</b> */
-    private float currentSpeed = 0f;
-    /** a degree to increases and decreases the indicator around correct speed */
+    private float currentSpeed = minSpeed;
+    /** a degree to increases and decreases speed value around {@link #speed} */
     private float trembleDegree = 4f;
     private int trembleDuration = 1000;
 
@@ -107,6 +108,7 @@ public abstract class Gauge extends View {
     private float speedTextPadding = dpTOpx(20f);
     private boolean unitUnderSpeedText = false;
     private Bitmap speedUnitTextBitmap;
+    private Canvas speedUnitTextCanvas;
 
     /** draw speed text as <b>integer</b> .*/
     public static final byte INTEGER_FORMAT = 0;
@@ -172,6 +174,8 @@ public abstract class Gauge extends View {
 
         maxSpeed = a.getInt(R.styleable.Gauge_sv_maxSpeed, maxSpeed);
         minSpeed = a.getInt(R.styleable.Gauge_sv_minSpeed, minSpeed);
+        speed = minSpeed;
+        currentSpeed = minSpeed;
         withTremble = a.getBoolean(R.styleable.Gauge_sv_withTremble, withTremble);
         textPaint.setColor(a.getColor(R.styleable.Gauge_sv_textColor, textPaint.getColor()));
         textPaint.setTextSize(a.getDimension(R.styleable.Gauge_sv_textSize, textPaint.getTextSize()));
@@ -219,13 +223,16 @@ public abstract class Gauge extends View {
             speedTextPaint.setTextAlign(Paint.Align.LEFT);
             unitTextPaint.setTextAlign(Paint.Align.LEFT);
         }
-        recreateSpeedUnitTextBitmap();
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldW, int oldH) {
         super.onSizeChanged(w, h, oldW, oldH);
         setPadding(getPaddingLeft(), getPaddingTop(), getPaddingRight(), getPaddingBottom());
+        if (widthPa > 0 && heightPa > 0)
+            speedUnitTextBitmap = Bitmap.createBitmap(widthPa
+                    , heightPa, Bitmap.Config.ARGB_8888);
+        speedUnitTextCanvas = new Canvas(speedUnitTextBitmap);
     }
 
     private void checkSpeedometerPercent() {
@@ -304,21 +311,19 @@ public abstract class Gauge extends View {
 
         // check onSpeedChangeEvent.
         int newSpeed = (int) currentSpeed;
-        if (newSpeed != currentIntSpeed) {
-            if (onSpeedChangeListener != null) {
-                boolean byTremble = Build.VERSION.SDK_INT >= 11 && trembleAnimator.isRunning();
-                boolean isSpeedUp = newSpeed > currentIntSpeed;
-                int update = isSpeedUp ? 1 : -1;
-                // this loop to pass on all speed values,
-                // to safe handle by call gauge.getCorrectIntSpeed().
-                while (currentIntSpeed != newSpeed) {
-                    currentIntSpeed += update;
-                    onSpeedChangeListener.onSpeedChange(this, isSpeedUp, byTremble);
-                }
+        if (newSpeed != currentIntSpeed && onSpeedChangeListener != null) {
+            boolean byTremble = Build.VERSION.SDK_INT >= 11 && trembleAnimator.isRunning();
+            boolean isSpeedUp = newSpeed > currentIntSpeed;
+            int update = isSpeedUp ? 1 : -1;
+            // this loop to pass on all speed values,
+            // to safe handle by call gauge.getCorrectIntSpeed().
+            while (currentIntSpeed != newSpeed) {
+                currentIntSpeed += update;
+                onSpeedChangeListener.onSpeedChange(this, isSpeedUp, byTremble);
             }
-            else
-                currentIntSpeed = newSpeed;
         }
+        currentIntSpeed = newSpeed;
+
         // check onSectionChangeEvent.
         byte newSection = getSection();
         if (section != newSection)
@@ -327,81 +332,63 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * draw speed and unit text at correct {@link #speedTextPosition},
+     * draw speed and unit text at {@link #speedTextPosition},
      * this method must call in subSpeedometer's {@code onDraw} method.
      * @param canvas view canvas to draw.
      */
     protected void drawSpeedUnitText(Canvas canvas) {
         RectF r = getSpeedUnitTextBounds();
-        canvas.drawBitmap(updateSpeedUnitTextBitmap(), r.left, r.top, speedUnitTextBitmapPaint);
-    }
-
-    /**
-     * fixable method to create {@link #speedUnitTextBitmap}
-     * to avoid create it every frame in {@code onDraw} method.
-     */
-    private void recreateSpeedUnitTextBitmap() {
-        speedUnitTextBitmap = Bitmap.createBitmap((int) getMaxWidthForSpeedUnitText()
-                , (int) getSpeedUnitTextHeight(), Bitmap.Config.ARGB_8888);
+        updateSpeedUnitTextBitmap(getSpeedText());
+        canvas.drawBitmap(speedUnitTextBitmap, r.left - speedUnitTextBitmap.getWidth() *.5f + r.width() *.5f
+                , r.top - speedUnitTextBitmap.getHeight() *.5f + r.height() *.5f, speedUnitTextBitmapPaint);
     }
 
     /**
      * clear {@link #speedUnitTextBitmap} and draw speed and unit Text
      * taking into consideration {@link #speedometerTextRightToLeft} and {@link #unitUnderSpeedText}.
-     * @return {@link #speedUnitTextBitmap} after update.
      */
-    private Bitmap updateSpeedUnitTextBitmap() {
+    private void updateSpeedUnitTextBitmap(String speedText) {
         speedUnitTextBitmap.eraseColor(Color.TRANSPARENT);
-        Canvas c = new Canvas(speedUnitTextBitmap);
 
         if (unitUnderSpeedText) {
-            c.drawText(getSpeedText(), speedUnitTextBitmap.getWidth() *.5f
-                    , speedTextPaint.getTextSize(), speedTextPaint);
-            c.drawText(unit, speedUnitTextBitmap.getWidth() *.5f
-                    , speedTextPaint.getTextSize() + unitSpeedInterval + unitTextPaint.getTextSize(), unitTextPaint);
-            return speedUnitTextBitmap;
+            speedUnitTextCanvas.drawText(speedText, speedUnitTextBitmap.getWidth() *.5f
+                    , speedUnitTextBitmap.getHeight() *.5f  - unitSpeedInterval *.5f, speedTextPaint);
+            speedUnitTextCanvas.drawText(unit, speedUnitTextBitmap.getWidth() *.5f
+                    , speedUnitTextBitmap.getHeight() *.5f + unitTextPaint.getTextSize() + unitSpeedInterval *.5f, unitTextPaint);
         }
         else {
             float speedX;
             float unitX;
             if (isSpeedometerTextRightToLeft()) {
-                speedX = unitTextPaint.measureText(unit) + unitSpeedInterval;
-                unitX = 0f;
+                unitX = speedUnitTextBitmap.getWidth() *.5f - getSpeedUnitTextWidth() *.5f;
+                speedX = unitX + unitTextPaint.measureText(unit) + unitSpeedInterval;
             }
             else {
-                speedX = 0f;
-                unitX = speedTextPaint.measureText(getSpeedText()) + unitSpeedInterval;
+                speedX = speedUnitTextBitmap.getWidth() *.5f - getSpeedUnitTextWidth() *.5f;
+                unitX = speedX + speedTextPaint.measureText(speedText) + unitSpeedInterval;
             }
-            c.drawText(getSpeedText(), speedX, c.getHeight() - .15f, speedTextPaint);
-            c.drawText(unit, unitX, c.getHeight() - .15f, unitTextPaint);
-            return speedUnitTextBitmap;
+            float h = speedUnitTextBitmap.getHeight() *.5f + getSpeedUnitTextHeight() *.5f;
+            speedUnitTextCanvas.drawText(speedText, speedX, h, speedTextPaint);
+            speedUnitTextCanvas.drawText(unit, unitX, h, unitTextPaint);
         }
     }
 
     /**
      * speed-unit text position and size.
-     * @return correct speed-unit's rect.
+     * @return speed-unit's rect.
      */
     protected RectF getSpeedUnitTextBounds() {
         float left = getWidthPa()*speedTextPosition.x -translatedDx + padding
-                - speedUnitTextBitmap.getWidth()*speedTextPosition.width
+                - getSpeedUnitTextWidth()*speedTextPosition.width
                 + speedTextPadding*speedTextPosition.paddingH;
         float top = getHeightPa()*speedTextPosition.y -translatedDy + padding
-                - speedUnitTextBitmap.getHeight()*speedTextPosition.height
+                - getSpeedUnitTextHeight()*speedTextPosition.height
                 + speedTextPadding*speedTextPosition.paddingV;
         return new RectF(left, top, left + getSpeedUnitTextWidth(), top + getSpeedUnitTextHeight());
     }
 
-    private float getMaxWidthForSpeedUnitText() {
-        String maxSpeedText = speedTextFormat == FLOAT_FORMAT ? String.format(locale, "%.1f", (float)maxSpeed)
-                : String.format(locale, "%d", maxSpeed);
-        return unitUnderSpeedText ?
-                Math.max(speedTextPaint.measureText(maxSpeedText), unitTextPaint.measureText(unit))
-                : speedTextPaint.measureText(maxSpeedText) + unitTextPaint.measureText(unit) + unitSpeedInterval;
-    }
-
     /**
-     * @return the width of speed & unit text.
+     * @return the width of speed & unit text at runtime.
      */
     private float getSpeedUnitTextWidth() {
         return unitUnderSpeedText ?
@@ -410,7 +397,7 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * @return the height of speed & unit text.
+     * @return the height of speed & unit text at runtime.
      */
     private float getSpeedUnitTextHeight() {
         return unitUnderSpeedText ?
@@ -431,8 +418,8 @@ public abstract class Gauge extends View {
 
     /**
      * Implement this method to handle section change event.
-     * @param oldSection where indicator came from.
-     * @param newSection where indicator move to.
+     * @param oldSection where speed value came from.
+     * @param newSection where speed value move to.
      */
     protected void onSectionChangeEvent(byte oldSection, byte newSection) {
         if (onSectionChangeListener != null)
@@ -482,8 +469,8 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * rotate indicator to correct speed without animation.
-     * @param speed correct speed to move.
+     * move speed value to new speed without animation.
+     * @param speed current speed to move.
      */
     public void setSpeedAt(float speed) {
         speed = (speed > maxSpeed) ? maxSpeed : (speed < minSpeed) ? minSpeed : speed;
@@ -523,16 +510,16 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * move speed to correct {@code int},
+     * move speed to current value smoothly,
      * it should be between [{@link #minSpeed}, {@link #maxSpeed}].<br>
      * <br>
-     * if {@code speed > maxSpeed} speed will change to {@link #maxSpeed},<br>
-     * if {@code speed < minSpeed} speed will change to {@link #minSpeed}.<br>
+     * if {@code speed > maxSpeed} speed value will move to {@link #maxSpeed},<br>
+     * if {@code speed < minSpeed} speed value will move to {@link #minSpeed}.<br>
      *
      * it is the same {@link #speedTo(float, long)}
      * with default {@code moveDuration = 2000}.
      *
-     * @param speed correct speed to move.
+     * @param speed current speed to move.
      *
      * @see #speedTo(float, long)
      * @see #speedPercentTo(int)
@@ -543,14 +530,14 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * move speed to correct {@code int},
+     * move speed to current value smoothly with animation duration,
      * it should be between [{@link #minSpeed}, {@link #maxSpeed}].<br>
      * <br>
-     * if {@code speed > maxSpeed} speed will change to {@link #maxSpeed},<br>
-     * if {@code speed < minSpeed} speed will change to {@link #minSpeed}.
+     * if {@code speed > maxSpeed} speed value will move to {@link #maxSpeed},<br>
+     * if {@code speed < minSpeed} speed value will move to {@link #minSpeed}.
      *
-     * @param speed correct speed to move.
-     * @param moveDuration The length of the animation, in milliseconds.
+     * @param speed current speed to move.
+     * @param moveDuration The length of animation, in milliseconds.
      *                     This value cannot be negative.
      *
      * @see #speedTo(float)
@@ -617,10 +604,10 @@ public abstract class Gauge extends View {
     /**
      * to make speedometer some real.
      * <br>
-     * when <b>speed up</b> : speed value well increase <i>slowly</i> by {@link #accelerate}.
+     * when <b>speed up</b> : speed value will increase <i>slowly</i> by {@link #accelerate}.
      * <br>
      * when <b>slow down</b> : speed value will decrease <i>rapidly</i> by {@link #decelerate}.
-     * @param speed correct speed to move.
+     * @param speed current speed to move.
      *
      * @see #speedTo(float)
      * @see #speedTo(float, long)
@@ -702,7 +689,7 @@ public abstract class Gauge extends View {
 
     /**
      * @param percentSpeed between [0, 100].
-     * @return speed value at correct percentSpeed.
+     * @return speed value at current percentSpeed.
      */
     private float getSpeedValue(float percentSpeed) {
         percentSpeed = (percentSpeed > 100) ? 100 : (percentSpeed < 0) ? 0 : percentSpeed;
@@ -743,7 +730,7 @@ public abstract class Gauge extends View {
 
     /**
      * default : 4 speed value.
-     * @param trembleDegree a speed value to increases and decreases the indicator around correct speed.
+     * @param trembleDegree a speed value to increases and decreases current speed around {@link #speed}.
      * @throws IllegalArgumentException If trembleDegree is Negative.
      */
     public void setTrembleDegree (float trembleDegree) {
@@ -761,7 +748,7 @@ public abstract class Gauge extends View {
 
     /**
      * tremble control.
-     * @param trembleDegree a speed value to increases and decreases the indicator around correct speed.
+     * @param trembleDegree a speed value to increases and decreases current around {@link #speed}.
      * @param trembleDuration tremble Animation duration in millisecond.
      *
      * @see #setTrembleDegree(float)
@@ -787,7 +774,6 @@ public abstract class Gauge extends View {
      */
     public void setSpeedTextFormat(byte speedTextFormat) {
         this.speedTextFormat = speedTextFormat;
-        recreateSpeedUnitTextBitmap();
         if (!attachedToWindow)
             return;
         updateBackgroundBitmap();
@@ -795,8 +781,8 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * get correct speed as string to <b>Draw</b>.
-     * @return correct speed to draw.
+     * get current speed as string to <b>Draw</b>.
+     * @return current speed to draw.
      */
     protected String getSpeedText() {
         return speedTextFormat == FLOAT_FORMAT ? String.format(locale, "%.1f", currentSpeed)
@@ -820,10 +806,10 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * <b>if true</b> : the indicator automatically will be increases and decreases
-     * {@link #trembleDegree} speed value around last speed you set,
+     * <b>if true</b> : the speed value automatically will be increases and decreases
+     * by {@link #trembleDegree} around last speed you set,
      * used to add some reality to speedometer.<br>
-     * <b>if false</b> : nothing will do.
+     * <b>if false</b> : nothing will done.
      * @param withTremble to play tremble Animation
      *
      * @see #setTrembleData(float, int)
@@ -834,8 +820,8 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * @return whether indicator could increases and decreases automatically
-     * around last speed about {@link #trembleDegree} speed value.
+     * @return whether speed value could increase and decrease automatically
+     * around last speed by {@link #trembleDegree}.
      */
     public boolean isWithTremble() {
         return withTremble;
@@ -853,10 +839,10 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * what is correct speed now.
-     * <p>It will give different results if withTremble is running.</p>
+     * what is current speed now.
+     * <p>It will give different results if {@link #withTremble} is running.</p>
      *
-     * @return correct speed now.
+     * @return current speed now.
      * @see #setWithTremble(boolean)
      * @see #getSpeed()
      */
@@ -869,7 +855,7 @@ public abstract class Gauge extends View {
      * <p>
      *     safe method to handle all speed values in {@link #onSpeedChangeListener}.
      * </p>
-     * @return correct speed in Integer
+     * @return current speed in Integer
      * @see #getCurrentSpeed()
      */
     public int getCurrentIntSpeed() {
@@ -889,6 +875,8 @@ public abstract class Gauge extends View {
 
     /**
      * change max speed.<br>
+     * this method will move {@link #currentSpeed} to its new position
+     * immediately without animation.
      *
      * @param maxSpeed new MAX Speed.
      *
@@ -911,8 +899,10 @@ public abstract class Gauge extends View {
 
     /**
      * change min speed.<br>
+     * this method will move {@link #currentSpeed} to its new position
+     * immediately without animation.
      *
-     * @param minSpeed new MAX Speed.
+     * @param minSpeed new MIN Speed.
      *
      * @throws IllegalArgumentException if {@code minSpeed >= maxSpeed}
      */
@@ -922,8 +912,11 @@ public abstract class Gauge extends View {
 
     /**
      * change Min and Max speed.<br>
+     * this method will move {@link #currentSpeed} to its new position
+     * immediately without animation.
      *
-     * @param minSpeed new MAX Speed.
+     * @param minSpeed new MIN Speed.
+     * @param maxSpeed new MAX Speed.
      *
      * @throws IllegalArgumentException if {@code minSpeed >= maxSpeed}
      */
@@ -933,7 +926,6 @@ public abstract class Gauge extends View {
         cancelSpeedAnimator();
         this.minSpeed = minSpeed;
         this.maxSpeed = maxSpeed;
-        recreateSpeedUnitTextBitmap();
         if (!attachedToWindow)
             return;
         updateBackgroundBitmap();
@@ -941,7 +933,7 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * get correct speed as <b>percent</b>.
+     * get current speed as <b>percent</b>.
      * @return percent speed, between [0,100].
      */
     public float getPercentSpeed() {
@@ -1058,7 +1050,6 @@ public abstract class Gauge extends View {
      */
     public void setSpeedTextSize(float speedTextSize) {
         speedTextPaint.setTextSize(speedTextSize);
-        recreateSpeedUnitTextBitmap();
         if (!attachedToWindow)
             return;
         invalidate();
@@ -1081,7 +1072,6 @@ public abstract class Gauge extends View {
      */
     public void setUnitTextSize(float unitTextSize) {
         unitTextPaint.setTextSize(unitTextSize);
-        recreateSpeedUnitTextBitmap();
         if (!attachedToWindow)
             return;
         updateBackgroundBitmap();
@@ -1101,7 +1091,6 @@ public abstract class Gauge extends View {
      */
     public void setUnit(String unit) {
         this.unit = unit;
-        recreateSpeedUnitTextBitmap();
         if (!attachedToWindow)
             return;
         invalidate();
@@ -1257,8 +1246,8 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * check if correct speed in <b>Low Speed Section</b>.
-     * @return true if correct speed in Low Speed Section.
+     * check if current speed in <b>Low Speed Section</b>.
+     * @return true if current speed in Low Section.
      *
      * @see #setLowSpeedPercent(int)
      */
@@ -1267,9 +1256,9 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * check if correct speed in <b>Medium Speed Section</b>.
-     * @return true if correct speed in Medium Speed Section
-     * , and it is not in Low Speed Section.
+     * check if current speed in <b>Medium Speed Section</b>.
+     * @return true if current speed in Medium Section
+     * , and it is not in Low Section.
      *
      * @see #setMediumSpeedPercent(int)
      */
@@ -1278,16 +1267,16 @@ public abstract class Gauge extends View {
     }
 
     /**
-     * check if correct speed in <b>High Speed Section</b>.
-     * @return true if correct speed in High Speed Section
-     * , and it is not in Low Speed Section or Medium Speed Section.
+     * check if current speed in <b>High Speed Section</b>.
+     * @return true if current speed in High Section
+     * , and it is not in Low Section or Medium Section.
      */
     public boolean isInHighSection() {
         return currentSpeed > (maxSpeed - minSpeed)*getMediumSpeedOffset() + minSpeed;
     }
 
     /**
-     * @return correct section,
+     * @return current section,
      * used in condition : {@code if (speedometer.getSection() == speedometer.LOW_SECTION)}.
      */
     public byte getSection() {
@@ -1415,7 +1404,6 @@ public abstract class Gauge extends View {
      */
     public void setUnitSpeedInterval(float unitSpeedInterval) {
         this.unitSpeedInterval = unitSpeedInterval;
-        recreateSpeedUnitTextBitmap();
         if (!attachedToWindow)
             return;
         updateBackgroundBitmap();
@@ -1463,7 +1451,6 @@ public abstract class Gauge extends View {
             speedTextPaint.setTextAlign(Paint.Align.LEFT);
             unitTextPaint.setTextAlign(Paint.Align.LEFT);
         }
-        recreateSpeedUnitTextBitmap();
         if (!attachedToWindow)
             return;
         updateBackgroundBitmap();
