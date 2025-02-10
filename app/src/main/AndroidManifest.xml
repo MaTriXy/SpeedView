@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.github.anastr.speedview">
+    package="com.github.anastr.speedviewapp">
 
     <application
         android:allowBackup="true"
@@ -8,7 +8,15 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity">
+        <activity
+            android:name=".FulcrumActivity"
+            android:exported="false" />
+        <activity android:name=".MarksActivity" />
+        <activity android:name=".AboutActivity" />
+        <activity android:name=".SectionActivity" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -32,6 +40,7 @@
         <activity android:name=".lineargauge.ProgressiveGaugeActivity" />
         <activity android:name=".lineargauge.ImageLinearGaugeActivity" />
         <activity android:name=".TickActivity" />
+        <activity android:name=".RecyclerActivity" />
     </application>
 
 </manifest>

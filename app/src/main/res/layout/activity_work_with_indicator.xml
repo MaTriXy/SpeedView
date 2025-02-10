@@ -11,11 +11,11 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     android:orientation="vertical"
     tools:ignore="SmallSp"
-    tools:context="com.github.anastr.speedview.WorkWithIndicatorActivity">
+    tools:context="com.github.anastr.speedviewapp.WorkWithIndicatorActivity">
 
     <com.github.anastr.speedviewlib.SpeedView
         android:id="@+id/speedometer"
-        android:layout_width="300dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         app:sv_speedTextSize="11sp"
@@ -23,16 +23,11 @@
         app:sv_textSize="8sp"
         app:sv_startDegree="110"
         app:sv_endDegree="430"
-        app:sv_lowSpeedPercent="50"
-        app:sv_mediumSpeedPercent="78"
         app:sv_speedometerWidth="45dp"
         app:sv_indicator="NormalIndicator"
         app:sv_indicatorWidth="20dp"
         app:sv_centerCircleColor="#0000"
-        app:sv_indicatorColor="#df4346"
-        app:sv_lowSpeedColor="#4bbbc7"
-        app:sv_mediumSpeedColor="#ba682d"
-        app:sv_highSpeedColor="#c2308d" />
+        app:sv_indicatorColor="#df4346" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -48,11 +43,11 @@
             android:background="#a8ff83"/>
 
         <Button
+            android:id="@+id/b_image_indicator"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight=".5"
-            android:text="image"
-            android:onClick="imageIndicator"/>
+            android:text="image"/>
 
     </LinearLayout>
 

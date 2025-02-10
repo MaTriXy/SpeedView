@@ -2,14 +2,15 @@
 Dynamic Speedometer, Gauge for Android. **amazing**, **powerful**, and _multi shape_ :zap: , you can change (colors, bar width, shape, text, font ...everything !!), this Library has also made to build **games** with `accelerate` and `decelerate`,
  [see project on GitHub](https://github.com/anastr/SpeedView/).
 
-`minSdkVersion=8`
+Library Size just ~ 48 KB.
 
-Library Size just ~ 50 KB.
+[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-SpeedView-green.svg?style=true)](https://android-arsenal.com/details/1/4169)
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.anastr/speedviewlib?color=cyan)](https://mvnrepository.com/artifact/com.github.anastr/speedviewlib/latest)
+[![API](https://img.shields.io/badge/API-+11-red.svg?style=flat)](#)
+[![Twitter](https://img.shields.io/badge/Twitter-@AnasAltairDent-blue.svg?style=flat)](http://twitter.com/AnasAltairDent)
 
-[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-SpeedView-blue.svg?style=true)](https://android-arsenal.com/details/1/4169)
-[![API](https://img.shields.io/badge/API-+8-red.svg?style=flat)](#)
-[![Bintray](https://img.shields.io/bintray/v/anastr/maven/SpeedView.svg)](https://bintray.com/anastr/maven/SpeedView)
-
+Download demo on Google Play:\
+ <a href='https://play.google.com/store/apps/details?id=com.github.anastr.speedviewapp&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'><img  width="25%" alt='SpeedView Demo on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png'/></a>
 
 **Speedometers...**<br/>
 <img src="images/SpeedView.gif" width="32%" />
@@ -20,31 +21,66 @@ Library Size just ~ 50 KB.
 <img src="images/ProgressiveGauge.gif" width="49%" />
 <img src="images/ImageLinearGauge.gif" width="49%" />
 
+# Donations
+
+This project needs you! If you would like to support this project, the creator of this project or the continuous maintenance of this project, feel free to donate. Your donation is highly appreciated. Thank you!
+
+[![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=VQ9DDY2KSQLJW)
+
+# Compose Multiplatform
+
+> SpeedView is now available in Jetpack Compose! Check [Speedometer](https://github.com/anastr/Speedometer/) repo for more info.
+
+<a href='https://github.com/anastr/Speedometer/'><img  width="25%" alt='Speedometer for Compose Multiplatform' src='images/Jetpack-Compose.png'/></a>
+
+
 # Download
 
-**add this line to** `build.gradle`
+Starting from version `1.5.4` this library uploaded to `mavenCentral`, the old versions was on `jcenter`. To work with this library you need `Kotlin` version `1.5.20` or above.
+
+First add kotlin to your project, in `build.gradle` **project level**:
 
 ```gradle
+buildscript {
+    ext.kotlin_version = '1.5.31'
+    dependencies {
+        ...
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+...
+allprojects {
+    repositories {
+        ...
+        mavenCentral()
+    }
+}
+```
 
+Then add this line to `build.gradle` **app module level**:
+
+```gradle
+apply plugin: 'kotlin-android'
+...
 dependencies {
-	    compile 'com.github.anastr:speedviewlib:1.1.7'
+	implementation 'com.github.anastr:speedviewlib:1.6.1'
 }
 
 ```
 
-for **maven**
+For **maven**
 
 ```maven
 <dependency>
   <groupId>com.github.anastr</groupId>
   <artifactId>speedviewlib</artifactId>
-  <version>1.1.7</version>
+  <version>1.6.1</version>
   <type>pom</type>
 </dependency>
 ```
 **[Get Starting](https://github.com/anastr/SpeedView/wiki/0.-Get-Started)** with _SpeedView Library_.
 # Simple Usage
-choose one of Speedometers, gauges and add it to your `Layout.xml`, here we use **SpeedView**.<br>
+Choose one of Speedometers, gauges and add it to your `Layout.xml`, here we use **SpeedView**.<br>
 ```xml
 
 <com.github.anastr.speedviewlib.SpeedView
@@ -54,25 +90,34 @@ choose one of Speedometers, gauges and add it to your `Layout.xml`, here we use 
 
 ```
 
-for all speedometers and gauges, this simple method to smoothly change speed:
-```java
-SpeedView speedometer = findViewById(R.id.speedView);
+For all speedometers and gauges, this simple method to smoothly change the speed:
+```kotlin
+SpeedView speedometer = findViewById(R.id.speedView)
 
 // move to 50 Km/s
-speedometer.speedTo(50);
+speedometer.speedTo(50)
 ```
 
-by default, the speed change Duration between last speed and new speed is `2000 ms`.<br>
-you can use other Duration by method :
-```java
+By default, speed change duration between last speed and new one is `2000 ms`.<br>
+You can pass your duration by this method :
+```kotlin
 // move to 50 Km/s with Duration = 4 sec
-speedometer.speedTo(50, 4000);
+speedometer.speedTo(50, 4000)
 ```
 
-**for more control**, see The most important methods at [Get Started - Wiki](https://github.com/anastr/SpeedView/wiki/0.-Get-Started) for **All Speedometers & Gauges**.<br>
-and also you can see **Advanced Usage** in [Usage - Wiki](https://github.com/anastr/SpeedView/wiki/Usage) and [Work With Notes - Wiki](https://github.com/anastr/SpeedView/wiki/Notes).<br>
-<img src="/images/usage/StartEndDegree.png" width="40%" />
-<img src="/images/usage/WorkWithNote.gif" width="35%" />
+Automatically, indicator moves around current speed to add some reality to speedometer because of [Tremble](https://github.com/anastr/SpeedView/wiki/0.-Get-Started#tremble), you can stop it by `app:sv_withTremble="false"`attribute or call this in your code:
+```kotlin
+speedometer.withTremble = false
+```
+
+**For more control**, see the most important methods at [Get Started - Wiki](https://github.com/anastr/SpeedView/wiki/0.-Get-Started) for **All Speedometers & Gauges**.<br>
+And also you can see **Advanced Usage** in [Usage - Wiki](https://github.com/anastr/SpeedView/wiki/Usage).
+
+More advanced features:
+- Work with [Indicators - Wiki](https://github.com/anastr/SpeedView/wiki/Indicators).
+- Work With [Notes - Wiki](https://github.com/anastr/SpeedView/wiki/Notes).
+
+<img src="/images/usage/StartEndDegree.png" width="40%" /> <img src="/images/usage/WorkWithNote.gif" width="35%" />
 
 ## All Speedometers, Gauges :
 
@@ -182,7 +227,7 @@ and also you can see **Advanced Usage** in [Usage - Wiki](https://github.com/ana
       <pre>
 &lt; com.github.anastr.speedviewlib.ProgressiveGauge
         android:id="@+id/gauge"
-        android:layout_width="300dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content" />
       </pre>
     </td>
@@ -204,22 +249,16 @@ and also you can see **Advanced Usage** in [Usage - Wiki](https://github.com/ana
 </table>
 
 ## TODO
-* build start animation.
-* add fuel gauge component.
-* build new custom speedometer.
+* Build start animation.
+* Add fuel gauge component.
+* Build new custom speedometer.
 
-your `pull request` is always Welcome, please review the **[rules of contribution](https://github.com/anastr/SpeedView/blob/master/CONTRIBUTING.md)** to make useful change.
-
-## Coming Soon ...
-i well try to draw this Speedometer.
-if you have any idea, image, template please **open new issue** and give me the image , and i well try to add it to the Library.
-
-<img src="/images/new2.png" width="30%" /> <img src="/images/new3.png" width="30%" />
+Your `pull request` is always welcome, please review the **[rules of contribution](https://github.com/anastr/SpeedView/blob/master/CONTRIBUTING.md)** to make a useful change.
 
 # LICENSE
 ```
 
-Copyright 2016 Anas ALtair
+Copyright 2016 Anas Altair
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
